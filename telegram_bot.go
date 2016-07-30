@@ -6,7 +6,7 @@ import (
 	"time"
 	"log"
 	"fmt"
-	"math/rand"
+	"github.com/avatar29A/mellody-bot/commands"
 )
 
 type TelegramBot struct {
@@ -21,7 +21,7 @@ type WorkerOutputChannel chan string
 type Worker struct {
 	UserName  string
 	ChannelIn WorkerInputChannel
-	Bot       *TelegramBot
+	Bot       TelegramBot
 }
 
 func NewTelegramBot(key string) TelegramBot {
@@ -45,7 +45,7 @@ func dispatcher(messagesChannel chan telebot.Message, bot TelegramBot) {
 		if isWorkerExists {
 			worker.ChannelIn <- message
 		} else {
-			worker := Worker{UserName: message.Chat.Username, Bot: &bot, ChannelIn: make(WorkerInputChannel)}
+			worker := Worker{UserName: message.Chat.Username, Bot: bot, ChannelIn: make(WorkerInputChannel)}
 			workers[message.Chat.Username] = worker
 
 			go commandHandler(worker)
@@ -56,25 +56,14 @@ func dispatcher(messagesChannel chan telebot.Message, bot TelegramBot) {
 
 func commandHandler(worker Worker) {
 	log.Print(fmt.Sprintf("Run worker for user: %v\n", worker.UserName))
-	id := rand.Int()
+	//var currentCommand commands.Commander = nil
 
 	for {
 		message := <-worker.ChannelIn
-		log.Print(fmt.Sprintf("[Thread %v] Got message from %v: %v\n", id, worker.UserName, message.Text))
-
-		worker.Bot.Telegram.SendMessage(message.Sender, "pong", &telebot.SendOptions{
-			ReplyMarkup: telebot.ReplyMarkup{
-				ForceReply: true,
-				Selective: true,
-
-				CustomKeyboard: [][]string{
-					[]string{"1", "2", "3"},
-					[]string{"4", "5", "6"},
-					[]string{"7", "8", "9"},
-					[]string{"*", "0", "#"},
-				},
-			},
-		})
+		if message.Text == "/start" {
+			cmd := commands.NewStartCommand(worker.Bot.Telegram)
+			cmd.Execute(message)
+		}
 	}
 }
 
