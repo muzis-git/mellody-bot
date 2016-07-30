@@ -7,6 +7,7 @@ import (
 	"log"
 	"fmt"
 	"math/rand"
+	"github.com/avatar29A/mellody-bot/commands"
 )
 
 type TelegramBot struct {
@@ -56,6 +57,7 @@ func dispatcher(messagesChannel chan telebot.Message, bot TelegramBot) {
 func commandHandler(worker Worker) {
 	log.Print(fmt.Sprintf("Run worker for user: %v\n", worker.UserName))
 	id := rand.Int()
+
 	for {
 		message := <-worker.ChannelIn
 		log.Print(fmt.Sprintf("[Thread %v] Got message from %v: %v\n", id, worker.UserName, message.Text))
