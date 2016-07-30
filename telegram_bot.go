@@ -10,7 +10,7 @@ import (
 )
 
 type TelegramBot struct {
-	ApiKey          string
+	apiKey          string
 	Telegram        *telebot.Bot
 	globalWaitGroup *sync.WaitGroup
 }
@@ -21,12 +21,13 @@ type WorkerOutputChannel chan string
 type Worker struct {
 	UserName  string
 	ChannelIn WorkerInputChannel
+	Bot       *TelegramBot
 }
 
 func NewTelegramBot(key string) TelegramBot {
-	bot := TelegramBot{ApiKey: key, globalWaitGroup: &sync.WaitGroup{}}
+	bot := TelegramBot{apiKey: key, globalWaitGroup: &sync.WaitGroup{}}
 
-	api, err := telebot.NewBot(bot.ApiKey)
+	api, err := telebot.NewBot(bot.apiKey)
 	if err != nil {
 		panic(err)
 	}
@@ -44,7 +45,7 @@ func dispatcher(messagesChannel chan telebot.Message, bot TelegramBot) {
 		if isWorkerExists {
 			worker.ChannelIn <- message
 		} else {
-			worker := Worker{UserName: message.Chat.Username, ChannelIn: make(WorkerInputChannel)}
+			worker := Worker{UserName: message.Chat.Username, Bot: &bot, ChannelIn: make(WorkerInputChannel)}
 			workers[message.Chat.Username] = worker
 
 			go commandHandler(worker)
@@ -60,6 +61,20 @@ func commandHandler(worker Worker) {
 	for {
 		message := <-worker.ChannelIn
 		log.Print(fmt.Sprintf("[Thread %v] Got message from %v: %v\n", id, worker.UserName, message.Text))
+
+		worker.Bot.Telegram.SendMessage(message.Sender, "pong", &telebot.SendOptions{
+			ReplyMarkup: telebot.ReplyMarkup{
+				ForceReply: true,
+				Selective: true,
+
+				CustomKeyboard: [][]string{
+					[]string{"1", "2", "3"},
+					[]string{"4", "5", "6"},
+					[]string{"7", "8", "9"},
+					[]string{"*", "0", "#"},
+				},
+			},
+		})
 	}
 }
 
