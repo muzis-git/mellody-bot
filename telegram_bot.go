@@ -5,12 +5,22 @@ import (
 	"sync"
 	"time"
 	"log"
+	"fmt"
+	"math/rand"
 )
 
 type TelegramBot struct {
 	ApiKey          string
 	Telegram        *telebot.Bot
 	globalWaitGroup *sync.WaitGroup
+}
+
+type WorkerInputChannel chan telebot.Message
+type WorkerOutputChannel chan string
+
+type Worker struct {
+	UserName  string
+	ChannelIn WorkerInputChannel
 }
 
 func NewTelegramBot(key string) TelegramBot {
@@ -25,23 +35,30 @@ func NewTelegramBot(key string) TelegramBot {
 	return bot
 }
 
-func handler(messagesChannel chan telebot.Message, bot TelegramBot) {
+func dispatcher(messagesChannel chan telebot.Message, bot TelegramBot) {
 	defer bot.globalWaitGroup.Done()
+	workers := make(map[string]Worker)
 
 	for message := range messagesChannel {
-		log.Printf("Received message '%v' from {%v}", message.Text, message.Chat.Username)
+		worker, isWorkerExists := workers[message.Chat.Username]
+		if isWorkerExists {
+			worker.ChannelIn <- message
+		} else {
+			worker := Worker{UserName: message.Chat.Username, ChannelIn: make(WorkerInputChannel)}
+			workers[message.Chat.Username] = worker
 
-		switch message.Text {
-		case "/hi":
-			bot.Telegram.SendMessage(message.Chat,
-				"Hello, " + message.Sender.FirstName + "!", nil)
-		case "/clip":
-			bot.Telegram.SendMessage(message.Chat, "https://www.youtube.com/watch?v=86URGgqONvA", nil)
-		case "/exit":
-			return
-		default:
-			bot.Telegram.SendMessage(message.Chat, "Try: /hi or /clip commands", nil)
+			go commandHandler(worker)
+			worker.ChannelIn <- message
 		}
+	}
+}
+
+func commandHandler(worker Worker) {
+	log.Print(fmt.Sprintf("Run worker for user: %v\n", worker.UserName))
+	id := rand.Int()
+	for {
+		message := <-worker.ChannelIn
+		log.Print(fmt.Sprintf("[Thread %v] Got message from %v: %v\n", id, worker.UserName, message.Text))
 	}
 }
 
@@ -51,7 +68,7 @@ func (bot TelegramBot) Start() {
 
 	bot.globalWaitGroup.Add(1)
 
-	go handler(messagesChannel, bot)
+	go dispatcher(messagesChannel, bot)
 
 	bot.globalWaitGroup.Wait()
 }
