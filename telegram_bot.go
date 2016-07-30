@@ -7,7 +7,6 @@ import (
 	"log"
 	"fmt"
 	"math/rand"
-	"github.com/avatar29A/mellody-bot/commands"
 )
 
 type TelegramBot struct {
