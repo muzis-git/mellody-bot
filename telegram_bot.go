@@ -56,13 +56,18 @@ func dispatcher(messagesChannel chan telebot.Message, bot TelegramBot) {
 
 func commandHandler(worker Worker) {
 	log.Print(fmt.Sprintf("Run worker for user: %v\n", worker.UserName))
-	//var currentCommand commands.Commander = nil
 
 	for {
 		message := <-worker.ChannelIn
-		if message.Text == "/start" {
+		switch message.Text {
+		case "/start":
 			cmd := commands.NewStartCommand(worker.Bot.Telegram)
 			cmd.Execute(message)
+			break
+		case "/stream/new":
+			cmd := commands.NewStreamNewCommand(worker.Bot.Telegram)
+			cmd.Execute(message)
+			break
 		}
 	}
 }

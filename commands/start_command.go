@@ -16,21 +16,19 @@ func NewStartCommand(telegram *telebot.Bot) StartCommand {
 	return cmd
 }
 
-func (cmd StartCommand) Execute(message telebot.Message) {
-
-	values := make(map[string]string)
-	values["{{username}}"] = message.Sender.FirstName
-
-	response, err := utils.LoadTemplate(utils.WELCOME_TEMPLATE_NAME, values)
+func (cmd StartCommand) Execute(message telebot.Message) Commander {
+	response, err := utils.LoadTemplate(utils.WELCOME_TEMPLATE_NAME, nil)
 	if err != nil {
 		log.Printf("(500) StartCommand.Execute() crach after tried to load template.\n%v\n", err)
-		return
+
+	} else {
+		cmd.Telegram.SendMessage(message.Sender,
+			response,
+			&telebot.SendOptions{
+				ParseMode: telebot.ModeMarkdown,
+			})
 	}
 
-	cmd.Telegram.SendMessage(message.Sender,
-		response,
-		&telebot.SendOptions{
-			ParseMode: telebot.ModeMarkdown,
-		})
+	return nil
 }
 
